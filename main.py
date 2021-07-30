@@ -1,12 +1,10 @@
-""" Tkinter demo gui for bezier fitting algorithm
-
-     (c) Volker Poplawski 2014
 """
-from __future__ import print_function
-from numpy import array
-from bezier import *
+Tkinter demo gui for bezier fitting algorithm
+(copy right) Shawn Yang
+"""
+
 from fitCurves import *
-from Tkinter import *
+from tkinter import *
 
 
 # center of bounding box
@@ -21,8 +19,16 @@ class MyCanvas(Canvas):
             self.create_line(p1, p2, kwargs)
 
 
-    def create_bezier(self, b, tag):
-        self.create_polyline([bezier.q(b, t/50.0).tolist() for t in xrange(0, 51)], tag=tag, fill='blue', width='2') # there are better ways to draw a bezier
+    def create_bezier(self, b, tag, arc_unit: int):
+        Lenth: int = 100
+        for i in range(int(Lenth/arc_unit)):
+            color = 'red'
+            if i % 2:
+                color = 'blue'
+            self.create_polyline([bezier.cb(b, float(t) / Lenth).tolist()
+                                   for t in range(i*arc_unit, (i+1)*arc_unit + 1)],
+                                  tag=tag, fill = color, width='2')
+
         self.create_line(b[0].tolist(), b[1].tolist(), tag=tag)
         self.create_point(b[1][0], b[1][1], 2, fill='black', tag=tag)
         self.create_line(b[3].tolist(), b[2].tolist(), tag=tag)
@@ -45,16 +51,23 @@ class MainObject:
     def run(self):
         root = Tk()
 
-        self.canvas = MyCanvas(root, bg='white', width=400, height=400)
+        self.canvas = MyCanvas(root, bg='white', width=800, height=800)
         self.canvas.pack(side=LEFT)
 
         frame = Frame(root, relief=SUNKEN, borderwidth=1)
         frame.pack(side=LEFT, fill=Y)
-        label = Label(frame, text='Max Error')
-        label.pack()
-        self.spinbox = Spinbox(frame, width=8, from_=0.0, to=1000000.0, command=self.onSpinBoxValueChange)
-        self.spinbox.insert(0, 10.0)
-        self.spinbox.pack()
+
+        label1 = Label(frame, text='Max Error')
+        label1.pack()
+        self.spinbox1 = Spinbox(frame, width=8, from_=0.0, to=10000.0, command=self.onSpinBoxValueChange)
+        self.spinbox1.insert(0, 100.0)
+        self.spinbox1.pack()
+
+        label2 = Label(frame, text='Arc Unit')
+        label2.pack()
+        self.spinbox2 = Spinbox(frame, width=8, from_=0, to=100, command=self.onSpinBoxValueChange)
+        self.spinbox2.insert(0, 1)
+        self.spinbox2.pack()
 
         self.points = []
         self.draggingPoint = None
@@ -98,7 +111,7 @@ class MainObject:
     def redraw(self):
         # redraw polyline
         self.canvas.delete('polyline')
-        self.canvas.create_polyline([self.canvas.pos(pId) for pId in self.points], fill='grey', tag='polyline')
+        self.canvas.create_polyline([self.canvas.pos(pId) for pId in self.points], fill='green', tag='polyline')
         self.canvas.tag_lower('polyline')
 
         # redraw bezier
@@ -107,9 +120,9 @@ class MainObject:
 
         self.canvas.delete('bezier')
         points = array([self.canvas.pos(p) for p in self.points])
-        beziers = fitCurve(points, float(self.spinbox.get())**2)
+        beziers = fitCurve(points, float(self.spinbox1.get())**2)
         for bezier in beziers:
-            self.canvas.create_bezier(bezier, tag='bezier')
+            self.canvas.create_bezier(bezier, tag='bezier', arc_unit=int(self.spinbox2.get()))
 
 
 if __name__ == '__main__':

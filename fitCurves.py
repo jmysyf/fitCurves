@@ -3,7 +3,6 @@
     by Philip J. Schneider
     "Graphics Gems", Academic Press, 1990
 """
-from __future__ import print_function
 from numpy import *
 import bezier
 
@@ -29,16 +28,15 @@ def fitCubic(points, leftTangent, rightTangent, error):
     maxError, splitPoint = computeMaxError(points, bezCurve, u)
     if maxError < error:
         return [bezCurve]
-
-    # If error not too large, try some reparameterization and iteration
-    if maxError < error**2:
+    # If error too large, try to split points into more pieces
+    else:
         for i in range(20):
-            uPrime = reparameterize(bezCurve, points, u)
-            bezCurve = generateBezier(points, uPrime, leftTangent, rightTangent)
-            maxError, splitPoint = computeMaxError(points, bezCurve, uPrime)
+            u_dev = reparameterize(bezCurve, points, u)
+            bezCurve = generateBezier(points, u_dev, leftTangent, rightTangent)
+            maxError, splitPoint = computeMaxError(points, bezCurve, u_dev)
             if maxError < error:
                 return [bezCurve]
-            u = uPrime
+            u = u_dev
 
     # Fitting failed -- split at max error point and fit recursively
     beziers = []
@@ -55,8 +53,8 @@ def generateBezier(points, parameters, leftTangent, rightTangent):
     # compute the A's
     A = zeros((len(parameters), 2, 2))
     for i, u in enumerate(parameters):
-        A[i][0] = leftTangent  * 3*(1-u)**2 * u
-        A[i][1] = rightTangent * 3*(1-u)    * u**2
+        A[i][0] = leftTangent * 3*(1-u)**2 * u
+        A[i][1] = rightTangent * 3*(1-u) * u**2
 
     # Create the C and X matrices
     C = zeros((2, 2))
@@ -68,7 +66,7 @@ def generateBezier(points, parameters, leftTangent, rightTangent):
         C[1][0] += dot(A[i][0], A[i][1])
         C[1][1] += dot(A[i][1], A[i][1])
 
-        tmp = point - bezier.q([points[0], points[0], points[-1], points[-1]], u)
+        tmp = point - bezier.cb([points[0], points[0], points[-1], points[-1]], u)
 
         X[0] += dot(A[i][0], tmp)
         X[1] += dot(A[i][1], tmp)
@@ -123,9 +121,9 @@ def newtonRaphsonRootFind(bez, point, u):
        gives
        u_n+1 = u_n - |q(u_n)-p * q'(u_n)| / |q'(u_n)**2 + q(u_n)-p * q''(u_n)|
     """
-    d = bezier.q(bez, u)-point
-    numerator = (d * bezier.qprime(bez, u)).sum()
-    denominator = (bezier.qprime(bez, u)**2 + d * bezier.qprimeprime(bez, u)).sum()
+    d = bezier.cb(bez, u) - point
+    numerator = (d * bezier.cb_dev(bez, u)).sum()
+    denominator = (bezier.cb_dev(bez, u) ** 2 + d * bezier.cb_dev2(bez, u)).sum()
 
     if denominator == 0.0:
         return u
@@ -140,7 +138,7 @@ def chordLengthParameterize(points):
 
     for i, _ in enumerate(u):
         u[i] = u[i] / u[-1]
-
+        # print(u[i])
     return u
 
 
@@ -148,7 +146,7 @@ def computeMaxError(points, bez, parameters):
     maxDist = 0.0
     splitPoint = len(points)/2
     for i, (point, u) in enumerate(zip(points, parameters)):
-        dist = linalg.norm(bezier.q(bez, u)-point)**2
+        dist = linalg.norm(bezier.cb(bez, u) - point) ** 2
         if dist > maxDist:
             maxDist = dist
             splitPoint = i
