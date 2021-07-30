@@ -7,3 +7,4 @@ III. Curve's arc parameterization
 IV. arc segement dyeing 
 
 2. example
+https://github.com/jmysyf/fitCurves/blob/master/demo.png
